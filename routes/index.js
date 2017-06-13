@@ -5,7 +5,7 @@ var path = require('path');
 var pdfmerger = require('pdfmerger');
 var multer = require('multer');
 var upload = multer({
-    dest: 'uploads/'
+    dest: '/tmp/pdfmerger/'
 })
 
 
@@ -19,9 +19,6 @@ router.get('/', function(req, res, next) {
 
 /* POST upload PDF files */
 router.post('/', upload.any(), function(req, res, next) {
-    console.log('Got a post. Files: ' + JSON.stringify(req.files));
-    console.log('Got a post. Body: ' + JSON.stringify(req.body));
-
     var outputFileName = req.body.outputName;
     if (outputFileName == null || outputFileName.trim().length < 1) {
         outputFileName = 'output.pdf';
@@ -59,15 +56,5 @@ router.post('/', upload.any(), function(req, res, next) {
         }
     });
 });
-
-function sendJsonResponse(status, message, data, res) {
-    var j = {
-        status: status,
-        message: message,
-        data: data
-    };
-
-    res.send(JSON.stringify(j));
-}
 
 module.exports = router;
