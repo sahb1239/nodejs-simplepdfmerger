@@ -7,9 +7,9 @@
             var nextNum = lastPdf.data('num') + 1;
 
             var temp = '<div class="form-group pdf" data-num="' + nextNum + '">' +
-                '	<label for="pdf' + nextNum + '" class="col-sm-2 control-label">PDF ' + nextNum + '</label>' +
+                '	<label for="file' + nextNum + '" class="col-sm-2 control-label">File ' + nextNum + '</label>' +
                 '	<div class="col-sm-10">' +
-                '		<input type="file" id="pdf' + nextNum + '" name="pdf' + nextNum + '" accept="application/pdf,*.pdf" />' +
+                '		<input type="file" id="file' + nextNum + '" name="file' + nextNum + '" accept="application/pdf,*.pdf,image/*" />' +
                 '	</div>' +
                 '</div>';
 
