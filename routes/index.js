@@ -32,10 +32,10 @@ router.post('/', upload.any(), function(req, res, next) {
         outputFileName = outputFileName + '.pdf';
     }
 
-    processFile(req.files, 0, res);
+    processFile(outputFileName, req.files, 0, res);
 });
 
-function processFile(files, index, res, pdfs) {
+function processFile(outputFileName, files, index, res, pdfs) {
     console.log(files.length, index);
     if (index >= files.length) {
         // We are finished, Merge the PDFs now
@@ -103,13 +103,13 @@ function processFile(files, index, res, pdfs) {
                 // Push new PDF to the array
                 pdfs.push(newPath);
                 var newIndex = index + 1;
-                processFile(files, newIndex, res, pdfs);
+                processFile(outputFileName, files, newIndex, res, pdfs);
             });
         } else {
             // already a PDF, so should be fine
             pdfs.push(file.path);
             var newIndex = index + 1;
-            processFile(files, newIndex, res, pdfs);
+            processFile(outputFileName, files, newIndex, res, pdfs);
         }
     }
 }
