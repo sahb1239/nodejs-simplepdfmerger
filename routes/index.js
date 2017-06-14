@@ -11,6 +11,7 @@ var upload = multer({
 var mime = require('mime-types');
 var PDFDocument = require('pdfkit');
 var imageSize = require('image-size');
+var jo = require('jpeg-autorotate');
 
 
 /* GET home page. */
@@ -32,10 +33,14 @@ router.post('/', upload.any(), function(req, res, next) {
         outputFileName = outputFileName + '.pdf';
     }
 
-    processFile(outputFileName, req.files, 0, res);
+    try {
+        processFile(next, outputFileName, req.files, 0, res);
+    } catch (err) {
+        next(err);
+    }
 });
 
-function processFile(outputFileName, files, index, res, pdfs) {
+function processFile(next, outputFileName, files, index, res, pdfs) {
     console.log(files.length, index);
     if (index >= files.length) {
         // We are finished, Merge the PDFs now
@@ -60,7 +65,7 @@ function processFile(outputFileName, files, index, res, pdfs) {
                         res.download(filePath);
                     });
                 } catch (e) {
-                    next(e);
+                    return next(e);
                 }
             });
         } else {
@@ -78,40 +83,70 @@ function processFile(outputFileName, files, index, res, pdfs) {
         console.log(file.originalname, mimeType);
 
         if (mimeType.startsWith('image/')) {
-            // We need to convert the image to a PDF
-            var newPath = file.path + '.pdf';
+            // Let's see if we need to rotate the image
+            if (mimeType == 'image/jpeg') {
+                jo.rotate(file.path, {}, function(error, buffer, orientation) {
+                    if (error && (
+                            error.code === jo.errors.correct_orientation ||
+                            error.code === jo.errors.unknown_orientation ||
+                            error.code === jo.errors.no_orientation ||
+                            error.code === jo.errors.read_exif
+                        )) {
 
-            console.log(newPath);
+                        console.log('Error reading EXIF ' + error.code);
+                        processImage(next, outputFileName, files, index, res, pdfs, file.path);
+                    } else if (error) {
+                        return next(error);
+                    } else {
+                        var tempFile = file.path + '.jpg';
 
-            var dimensions = imageSize(file.path);
+                        fs.writeFile(tempFile, buffer, function(err) {
+                            if (err) return next(err);
 
-            var fileReader = fs.createWriteStream(newPath);
-
-            var doc = new PDFDocument({
-                autoFirstPage: false
-            });
-            doc.addPage({
-                size: [dimensions.width, dimensions.height],
-                margin: 0
-            });
-            var fileStream = doc.pipe(fileReader);
-            doc.image(file.path);
-            doc.end();
-
-
-            fileReader.on('finish', function() {
-                // Push new PDF to the array
-                pdfs.push(newPath);
-                var newIndex = index + 1;
-                processFile(outputFileName, files, newIndex, res, pdfs);
-            });
+                            processImage(next, outputFileName, files, index, res, pdfs, tempFile);
+                        });
+                    }
+                });
+            } else {
+                processImage(next, outputFileName, files, index, res, pdfs, file.path);
+            }
         } else {
             // already a PDF, so should be fine
             pdfs.push(file.path);
             var newIndex = index + 1;
-            processFile(outputFileName, files, newIndex, res, pdfs);
+            processFile(next, outputFileName, files, newIndex, res, pdfs);
         }
     }
+}
+
+function processImage(next, outputFileName, files, index, res, pdfs, imagePath) {
+    // We need to convert the image to a PDF
+    var newPath = imagePath + '.pdf';
+
+    console.log(newPath);
+
+    var dimensions = imageSize(imagePath);
+
+    var fileReader = fs.createWriteStream(newPath);
+
+    var doc = new PDFDocument({
+        autoFirstPage: false
+    });
+    doc.addPage({
+        size: [dimensions.width, dimensions.height],
+        margin: 0
+    });
+    var fileStream = doc.pipe(fileReader);
+    doc.image(imagePath);
+    doc.end();
+
+
+    fileReader.on('finish', function() {
+        // Push new PDF to the array
+        pdfs.push(newPath);
+        var newIndex = index + 1;
+        processFile(next, outputFileName, files, newIndex, res, pdfs);
+    });
 }
 
 module.exports = router;
