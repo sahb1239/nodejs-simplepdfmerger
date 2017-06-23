@@ -8,6 +8,10 @@ var bodyParser = require('body-parser');
 var index = require('./routes/index');
 
 // Custom Morgan format
+logger.token('real-ip', function(req, res) {
+	return req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+})
+
 logger.format('custom', function developmentFormatLine(tokens, req, res) {
 	// get the status code if response written
 	var status = res._header ?
@@ -30,7 +34,7 @@ logger.format('custom', function developmentFormatLine(tokens, req, res) {
 
 	if (!fn) {
 		// compile
-		fn = developmentFormatLine[color] = logger.compile(':remote-addr - \x1b[0m:method :url \x1b[' +
+		fn = developmentFormatLine[color] = logger.compile(':real-ip - \x1b[0m:method :url \x1b[' +
 			color + 'm:status \x1b[0m:response-time ms - :res[content-length]\x1b[0m')
 	}
 
